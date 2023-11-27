@@ -1,6 +1,7 @@
 import warnings
 import flwr as fl
 import numpy as np
+import argparse
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
@@ -8,12 +9,45 @@ from sklearn.metrics import log_loss
 import utils
 
 if __name__ == "__main__":
+    # Accept a list of classes to train on
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--classes",
+        "-c",
+        nargs="+",
+        type=int,
+        help="List of classes to train on",
+        default=[],
+    )
+    args = parser.parse_args()
+
     # Load MNIST dataset from https://www.openml.org/d/554
     (X_train, y_train), (X_test, y_test) = utils.load_mnist()
 
-    # Split train set into 10 partitions and randomly use one for training.
-    partition_id = np.random.choice(10)
-    (X_train, y_train) = utils.partition(X_train, y_train, 10)[partition_id]
+    if args.classes:
+        # Define the classes to train on
+        classes_to_train_on = np.array(args.classes, dtype=np.float32)
+
+        # Filter out all other classes
+        mask = np.isin(y_train, classes_to_train_on)
+
+        # Identify the classes which were masked out
+        removed_classes = [cls for cls in np.unique(y_train) if cls not in classes_to_train_on]
+
+        # Add back the first record from each removed class to prevent errors
+        indices_to_keep = []
+        for cls in removed_classes:
+            indices_for_class = np.where(y_train == cls)[0]
+            first_occurrence_index = indices_for_class[0]
+            indices_to_keep.append(first_occurrence_index)
+        mask[indices_to_keep] = True
+
+        X_train = X_train[mask]
+        y_train = y_train[mask]
+    else:
+        # Split train set into 10 partitions and randomly use one for training.
+        partition_id = np.random.choice(10)
+        (X_train, y_train) = utils.partition(X_train, y_train, 10)[partition_id]
 
     # Create LogisticRegression Model
     model = LogisticRegression(
