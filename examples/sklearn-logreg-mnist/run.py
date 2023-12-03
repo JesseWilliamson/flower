@@ -3,7 +3,7 @@ import time
 import argparse
 import random
 
-def launch_scripts(num_rounds, num_clients, random_clients, num_classes, random_distribution, offset):
+def launch_scripts(num_rounds, num_clients, random_class_num, num_classes, random_distribution, offset):
     # Launch server.py
     server = subprocess.Popen(["python", "server.py", "--num_rounds", str(num_rounds)])
 
